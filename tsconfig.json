@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.local.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["frontend/**/*.ts", "frontend/**/*.tsx", "vite.local.ts"],
+  "exclude": ["node_modules", "dist-local"]
+}
