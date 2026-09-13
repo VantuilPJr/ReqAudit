@@ -1597,6 +1597,63 @@ h2 {
   font-size: 0.75rem;
   margin-top: 3px;
 }
+.settings-panel {
+  max-width: 1100px;
+  padding: 0;
+  overflow: hidden;
+}
+.settings-panel form {
+  margin: 0;
+}
+.settings-panel > form > .field {
+  padding: 24px 28px 18px;
+  margin: 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.email-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  color: #475569;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+.email-mode-toggle > svg {
+  color: #64748b;
+}
+.email-mode-toggle.enabled > svg {
+  color: #4f46e5;
+}
+.email-mode-toggle strong {
+  display: block;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+.email-mode-toggle small {
+  margin-top: 4px;
+}
+.settings-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 22px 28px 0;
+  border: 0;
+}
+.settings-fields:disabled {
+  opacity: 0.65;
+}
+.settings-fields hr {
+  margin: 2px 0 22px;
+  border: 0;
+  border-top: 1px solid #f1f5f9;
+}
+.settings-actions {
+  margin-top: 0;
+  padding: 18px 28px;
+  background: #fff;
+}
 /* ─── DIALOGS / FORMS ─── */
 .app-dialog {
   max-width: min(610px, calc(100vw - 32px)) !important;
@@ -1879,62 +1936,6 @@ h2 {
   flex: 1;
   height: 1px;
   background: #e2e8f0;
-}
-.initial-access {
-  display: grid;
-  gap: 8px;
-}
-.initial-access > strong {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 4px;
-  display: block;
-}
-.initial-access button {
-  width: 100%;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px 16px;
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  transition: all 0.15s;
-}
-.initial-access button:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-}
-.initial-access button span {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: #1e293b;
-}
-.initial-access button small {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  display: block;
-  margin: 0;
-}
-.initial-access-badge {
-  background: #ede9fe;
-  color: #6d28d9;
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 5px;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-.initial-access-badge.admin {
-  background: #fee2e2;
-  color: #dc2626;
 }
 .login-storage {
   font-size: 0.75rem;
@@ -2369,7 +2370,7 @@ h2 {
 }
 .login-box {
   width: 100%;
-  max-width: 460px;
+  max-width: 520px;
   padding: clamp(28px, 5vw, 44px);
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -2379,9 +2380,9 @@ h2 {
 .login-heading {
   margin-bottom: 34px;
 }
-.login-heading h2 {
+.login-heading h1 {
   color: #0f172a;
-  font-size: 2rem;
+  font-size: 2.35rem;
   line-height: 1.2;
   letter-spacing: -0.8px;
   margin-bottom: 10px;
@@ -2399,20 +2400,6 @@ h2 {
   background: #3730a3 !important;
   box-shadow: none !important;
   transform: none !important;
-}
-.login-box .initial-access {
-  border-top: 1px solid #e2e8f0;
-  margin-top: 30px;
-  padding-top: 24px;
-}
-.login-box .initial-access button {
-  padding: 11px 13px;
-}
-.login-box .initial-access > p {
-  color: #94a3b8;
-  font-size: 0.75rem;
-  line-height: 1.55;
-  margin-top: 4px;
 }
 .mail-status,
 .users-panel {
@@ -2639,19 +2626,14 @@ h2 {
     padding: 34px 16px;
   }
   .login-box {
-    padding: 26px 20px;
+    padding: 30px 22px;
   }
   .login-nav > a:last-child {
     max-width: 120px;
     text-align: right;
   }
-  .login-heading h2 {
+  .login-heading h1 {
     font-size: 1.75rem;
-  }
-  .login-box .initial-access button {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 2px;
   }
   .topbar {
     height: 66px;
@@ -2762,6 +2744,15 @@ h2 {
   }
   .form-grid {
     grid-template-columns: 1fr;
+  }
+  .settings-panel > form > .field,
+  .settings-fields {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .settings-actions {
+    padding-left: 18px;
+    padding-right: 18px;
   }
   .form-footer [data-slot='button'] {
     font-size: 0.75rem;

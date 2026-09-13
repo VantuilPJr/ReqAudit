@@ -31,7 +31,7 @@ export function hashSessionToken(token) {
 }
 
 export function defaultPassword(role) {
-  if (role === 'ADMIN') return 'Admin@123';
+  if (role === 'ADMIN') return '12345678';
   if (role === 'AUDITOR') return 'Auditor@123';
   if (role === 'RESPONSAVEL') return 'Responsavel@123';
   return 'Gestor@123';

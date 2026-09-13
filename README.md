@@ -4,7 +4,7 @@ Aplicação local para auditoria de qualidade de requisitos funcionais, implemen
 
 ## Executar no Windows
 
-Na pasta **Qualidade**, abra **INICIAR_REQAUDIT.cmd** com dois cliques. O navegador abrirá a homepage pública em **http://localhost:3001**. Use **Entrar** na barra de navegação para abrir a página exclusiva de login. Mantenha a janela do aplicativo aberta; use **Ctrl+C** para encerrar. Os dados permanecem salvos ao fechar.
+Na pasta **Qualidade**, abra **INICIAR_REQAUDIT.cmd** com dois cliques. O navegador abrirá diretamente a tela de login em **http://localhost:3001**. Mantenha a janela do aplicativo aberta; use **Ctrl+C** para encerrar. Os dados permanecem salvos ao fechar.
 
 As dependências e a versão compilada já foram preparadas neste computador. Para instalar em outro computador, utilize Node.js **22.18 ou superior** e execute na pasta `req-audit`:
 
@@ -18,15 +18,14 @@ O servidor atende somente em `127.0.0.1`. O acesso exige e-mail e senha; a sess�
 
 Credenciais iniciais de demonstração:
 
-- Auditor: `maria@example.test` / `Auditor@123`
-- Administrador: `admin@example.test` / `Admin@123`
+- Administrador: `admin@reqaudit.com` / `12345678`
 - Responsável: `joao@example.test` / `Responsavel@123`
 
 O administrador pode alterar nomes, e-mails e senhas na página **Usuários**.
 
 ## Fluxo de uso
 
-1. Na homepage, selecione **Entrar**, acesse como **Maria Oliveira · Auditor** e abra **Nova auditoria**.
+1. Acesse o sistema com uma conta autorizada e abra **Nova auditoria**.
 2. Para avaliar um PDF, documento impresso, item do Jira ou outra fonte, escolha **Documento externo** e informe o nome, tipo e, quando houver, código, versão, referência e trecho avaliado. Não é necessário cadastrar cada requisito antes. Para usar o fluxo anterior, escolha **Requisito cadastrado**.
 3. A auditoria preserva a identificação informada e recebe os 15 itens do checklist, sem respostas herdadas.
 4. Marque **Conforme** ou **Não conforme** em cada item. Salve observações quando necessário. Ao reprovar um item, o formulário de NC já vem vinculado ao documento e ao item; é possível registrar depois.

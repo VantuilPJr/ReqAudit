@@ -33,7 +33,6 @@ import { AppShell } from './components/AppShell';
 import { RecordDialog } from './components/RecordDialog';
 import type { Row } from './types';
 import { EmptyState as Empty } from './components/shared';
-import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { RequirementsPage } from './pages/RequirementsPage';
@@ -54,7 +53,7 @@ export function App() {
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [loginForm, setLoginForm] = useState<LoginCredentials>({ email: '', password: '' }),
-    [hash, setHash] = useState(location.hash || '#/home'),
+    [hash, setHash] = useState(location.hash || '#/login'),
     [modal, setModal] = useState<Row | null>(null),
     [detail, setDetail] = useState<NonConformity | null>(null),
     [drafts, setDrafts] = useState<Record<string, string>>({}),
@@ -115,8 +114,8 @@ export function App() {
           if (e.status === 401) {
             setData(null);
             setError('');
-            const currentPage = (location.hash || '#/home').replace('#/', '').split('/')[0];
-            if (!['home', 'login'].includes(currentPage)) {
+            const currentPage = (location.hash || '#/login').replace('#/', '').split('/')[0];
+            if (currentPage !== 'login') {
               window.location.replace('#/login');
             }
           } else setError(e.message);
@@ -125,7 +124,7 @@ export function App() {
     reload();
     const timer = window.setInterval(reload, 15000);
     const change = () => {
-      setHash(location.hash || '#/home');
+      setHash(location.hash || '#/login');
       setSearch('');
       setFilter('TODAS');
       setDetail(null);
@@ -193,7 +192,6 @@ export function App() {
       setBusy(false);
     }
   };
-  if (page === 'home') return <HomePage authenticated={Boolean(data)} />;
   if (!data && page === 'login')
     return (
       <LoginPage
@@ -215,7 +213,8 @@ export function App() {
           }
         }}
       />
-    );  if (!data)
+    );
+  if (!data)
     return (
       <div className="startup">
         <ShieldCheck size={42} />
@@ -444,7 +443,6 @@ export function App() {
     </SidebarProvider>
   );
 }
-
 
 
 

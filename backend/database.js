@@ -223,7 +223,20 @@ export function transaction(db, fn) {
   }
 }
 export function seed(db) {
-  if (db.prepare('SELECT count(*) n FROM users').get().n) return;
+  const usersExist = db.prepare('SELECT count(*) n FROM users').get().n;
+  if (usersExist) {
+    const legacyAdmin = db
+      .prepare("SELECT id FROM users WHERE role='ADMIN' AND email='admin@example.test'")
+      .get();
+    if (legacyAdmin) {
+      db.prepare('UPDATE users SET email=?,passwordHash=? WHERE id=?').run(
+        'admin@reqaudit.com',
+        hashPassword('12345678'),
+        legacyAdmin.id,
+      );
+    }
+    return;
+  }
   transaction(db, () => {
     const user = db.prepare(
       'INSERT INTO users (id,name,email,role,managementLevel,passwordHash) VALUES (?,?,?,?,?,?)',
@@ -234,7 +247,7 @@ export function seed(db) {
       [3, 'Ana Costa', 'ana@example.test', 'RESPONSAVEL', null],
       [4, 'Pedro Santos', 'pedro@example.test', 'GESTOR', 'LIDER'],
       [5, 'Carla Mendes', 'carla@example.test', 'GESTOR', 'GERENTE'],
-      [6, 'Administrador', 'admin@example.test', 'ADMIN', null],
+      [6, 'Administrador', 'admin@reqaudit.com', 'ADMIN', null],
     ].forEach((row) => user.run(...row, hashPassword(defaultPassword(row[3]))));
     CHECKLIST.forEach((text, i) =>
       db.prepare('INSERT INTO checklist_items VALUES (?,?)').run(i + 1, text),

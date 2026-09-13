@@ -200,7 +200,7 @@ test('login cria sessão persistida, protege a API e respeita o perfil', async (
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          email: 'admin@example.test',
+          email: 'admin@reqaudit.com',
           password: 'senha-errada',
         }),
       })
@@ -211,8 +211,8 @@ test('login cria sessão persistida, protege a API e respeita o perfil', async (
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      email: 'admin@example.test',
-      password: 'Admin@123',
+      email: 'admin@reqaudit.com',
+      password: '12345678',
     }),
   });
   assert.equal(login.status, 200);
@@ -226,7 +226,7 @@ test('login cria sessão persistida, protege a API e respeita o perfil', async (
   assert.notEqual(
     db.prepare("SELECT passwordHash FROM users WHERE role='ADMIN'").get()
       .passwordHash,
-    'Admin@123',
+    '12345678',
   );
   const logout = await fetch(`${base}/auth/logout`, {
     method: 'POST',

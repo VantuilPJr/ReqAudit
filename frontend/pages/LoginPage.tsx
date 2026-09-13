@@ -27,11 +27,10 @@ export function LoginPage({
   return (
     <main className="login-page">
       <header className="login-nav">
-        <a href="#/home" className="public-brand" aria-label="ReqAudit — início">
+        <div className="public-brand" aria-label="ReqAudit">
           <span className="brand-mark"><ShieldCheck size={24} /></span>
           <span>Req<strong>Audit</strong></span>
-        </a>
-        <a href="#/home">Voltar para a página inicial</a>
+        </div>
       </header>
       <section className="login-panel">
         <div className="login-box">
@@ -60,22 +59,6 @@ export function LoginPage({
               {busy ? 'Verificando…' : 'Entrar'}
             </Button>
           </form>
-          <div className="initial-access">
-            <strong>Acessos iniciais</strong>
-            <button
-              type="button"
-              onClick={() => onChange({ email: 'maria@example.test', password: 'Auditor@123' })}
-            >
-              <span>Auditor</span><small>maria@example.test</small>
-            </button>
-            <button
-              type="button"
-              onClick={() => onChange({ email: 'admin@example.test', password: 'Admin@123' })}
-            >
-              <span>Administrador</span><small>admin@example.test</small>
-            </button>
-            <p>Ao selecionar um acesso, a senha inicial é preenchida no formulário.</p>
-          </div>
         </div>
       </section>
     </main>
