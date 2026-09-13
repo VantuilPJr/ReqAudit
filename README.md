@@ -72,18 +72,20 @@ O administrador pode configurar e testar o SMTP em **Configurações de e-mail**
 | Parte | Implementação |
 | --- | --- |
 | Interface | React, TypeScript, Vite, componentes Shadcn/Base UI, Tailwind e CSS |
-| API | Node.js e Express, em `backend/app.js` |
+| API | Node.js e Express, organizada em `backend/routes/` e montada em `backend/app.js` |
 | Persistência | SQLite relacional, com chaves estrangeiras, índices e transações, via `node:sqlite` |
 | Regras | `backend/domain.js` e `backend/service.js` |
 | Banco e exemplos | `backend/database.js` |
 | Automação e execução | `backend/server.js` |
 | E-mail | Nodemailer, em `backend/mail.js` |
-| Interface principal | `frontend/main.tsx` e `frontend/styles.css` |
+| Interface | Bootstrap em `frontend/main.tsx`, orquestração em `frontend/App.tsx`, páginas em `frontend/pages/` e componentes em `frontend/components/` |
+| API da interface | Clientes por domínio em `frontend/api/`, com tratamento comum em `frontend/api/client.ts` |
+| Tipos | Entidades compartilhadas em `frontend/types/domain.ts` |
 | Testes reproduzíveis | `tests/reqaudit.test.js` |
 
 O banco fica em `data/reqaudit.sqlite`. Para fazer backup, encerre o aplicativo e copie a pasta `data`. Para começar uma base nova, com o aplicativo fechado, renomeie a pasta `data` para preservar o backup; a próxima execução criará outra. Prisma era uma sugestão do documento; foi usado o driver SQLite do próprio Node para simplificar a instalação local.
 
-O scaffold de interface preserva arquivos de suporte do Sites, mas a execução local utiliza `vite.local.ts`, `index.html` e o backend Express. Não há publicação nem dependência de serviços externos para usar o aplicativo.
+O scaffold de interface preserva arquivos de suporte do Sites, mas a execução local utiliza `vite.local.ts`, `index.html` e o backend Express. A interface separa páginas, componentes, clientes de API, tipos e formatadores sem introduzir camadas artificiais. Não há publicação nem dependência de serviços externos para usar o aplicativo.
 
 ## Desenvolvimento e validação
 
@@ -123,8 +125,8 @@ Todos os caminhos abaixo usam o prefixo `/api`. Exceto login e saúde, as rotas 
 | GET | `/non-conformities/:id/history` | Histórico de acompanhamento |
 | POST | `/admin/check-deadlines` | Verificação administrativa idempotente |
 | PATCH | `/admin/users/:id` | Administrar nome, e-mail e senha do usuário |
-| GET, PUT | `/admin/settings/email` | Consultar ou salvar a configuração SMTP |
-| POST | `/admin/settings/email/test` | Enviar uma mensagem de teste |
+| GET, PUT | `/admin/settings` | Consultar ou salvar a configuração SMTP |
+| POST | `/admin/settings/test-email` | Enviar uma mensagem de teste |
 | PATCH | `/notifications/read` | Marcar avisos do perfil como lidos |
 
 Consulte `ROTEIRO_DEMONSTRACAO.md` para a apresentação de até três minutos.
