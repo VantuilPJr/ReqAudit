@@ -334,7 +334,7 @@ export function RecordDialog({ modal, setModal, busy, mutate, data, user, detail
                       </div>
                     )}
                     <div className="field">
-                      <label htmlFor="picker-Auditor">Auditor</label>
+                      <label htmlFor="picker-Auditor">Auditor responsável (uma pessoa)</label>
                       <Picker
                         label="Auditor"
                         value={modal.auditorId}
@@ -342,7 +342,7 @@ export function RecordDialog({ modal, setModal, busy, mutate, data, user, detail
                         onChange={(v) => setModal({ ...modal, auditorId: v })}
                         options={data.users
                           .filter((u) => u.role === 'AUDITOR')
-                          .map((u) => ({ value: u.id, label: u.name }))}
+                          .map((u) => ({ value: u.id, label: `${u.name} · ${u.email}` }))}
                       />
                     </div>
                     <div className="field">
@@ -439,7 +439,7 @@ export function RecordDialog({ modal, setModal, busy, mutate, data, user, detail
                       onChange={(v) => setModal({ ...modal, responsibleId: v })}
                       options={data.users
                         .filter((u) => u.role === 'RESPONSAVEL')
-                        .map((u) => ({ value: u.id, label: u.name }))}
+                        .map((u) => ({ value: u.id, label: `${u.name} · ${u.email}` }))}
                     />
                   </div>
                 )}

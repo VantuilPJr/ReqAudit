@@ -32,16 +32,19 @@ Caso mude `PORT` no `.env`, ajuste também o destino de `/api` em `vite.local.ts
 
 ## 2 Conhecer os arquivos na ordem de leitura
 
-| Arquivo | Responsabilidade | O que editar aqui |
-| --- | --- | --- |
-| `backend/server.js` | Inicializa banco, Express, agendamento e envio de e-mails; serve a interface compilada | Porta, horário do cron, frequência de processamento da caixa de saída e inicialização |
-| `backend/app.js` | Rotas REST, validação de entradas e permissões dos perfis | Novos endpoints, campos aceitos, regras de acesso e respostas da API |
-| `backend/domain.js` | Regras pequenas que independem do banco | Cálculo de aderência, resultados permitidos, datas, severidades e limites de escalonamento |
-| `backend/database.js` | Tabelas, dados iniciais, transações e migrações | Novas colunas, integridade dos relacionamentos e atualização de bases existentes |
-| `backend/service.js` | Consultas e operações do processo | Dados de auditoria e NC, painel, histórico, destinatários e escalonamento |
-| `backend/mail.js` | Processa e-mails pendentes via Nodemailer | Configuração do transporte e tratamento de sucesso ou falha no envio |
-| `tests/reqaudit.test.js` | Testes de regras, API, banco e falhas | Casos de aceite e regressão da mudança |
-| `.env.example` | Modelo das configurações locais | Documentação de novas variáveis, sem credenciais reais |
+| Arquivo                         | Responsabilidade                                                                       | O que editar aqui                                                                          |
+| ------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `backend/server.js`             | Inicializa banco, Express, agendamento e envio de e-mails; serve a interface compilada | Porta, horário do cron, frequência de processamento da caixa de saída e inicialização      |
+| `backend/app.js`                | Monta o Express, middlewares e grupos de rotas                                         | Configuração HTTP global e composição da API                                               |
+| `backend/routes/`               | Rotas separadas por domínio                                                            | Endpoints de autenticação, requisitos, auditorias, NCs e administração                     |
+| `backend/http.js`               | Validação e resposta HTTP compartilhadas                                               | Mensagens de validação e representação pública do usuário                                  |
+| `backend/middleware/session.js` | Autentica a sessão                                                                     | Leitura do cookie e identidade de testes                                                   |
+| `backend/domain.js`             | Regras pequenas que independem do banco                                                | Cálculo de aderência, resultados permitidos, datas, severidades e limites de escalonamento |
+| `backend/database.js`           | Tabelas, dados iniciais, transações e migrações                                        | Novas colunas, integridade dos relacionamentos e atualização de bases existentes           |
+| `backend/service.js`            | Consultas e operações do processo                                                      | Dados de auditoria e NC, painel, histórico, destinatários e escalonamento                  |
+| `backend/mail.js`               | Processa e-mails pendentes via Nodemailer                                              | Configuração do transporte e tratamento de sucesso ou falha no envio                       |
+| `tests/reqaudit.test.js`        | Testes de regras, API, banco e falhas                                                  | Casos de aceite e regressão da mudança                                                     |
+| `.env.example`                  | Modelo das configurações locais                                                        | Documentação de novas variáveis, sem credenciais reais                                     |
 
 O caminho de uma requisição é:
 
@@ -91,17 +94,17 @@ Escreva um exemplo de entrada e o resultado esperado. Por exemplo:
 
 Escolha o arquivo a partir da mudança desejada:
 
-| Mudança | Arquivos principais | Conferências adicionais |
-| --- | --- | --- |
-| Alterar cálculo de aderência | `domain.js`, função `adherence` | Testes de percentuais e painel em `service.js` |
-| Alterar prazo de escalonamento | `domain.js`, função `escalationLevel` | Testar o dia anterior, o limite e o dia seguinte; conferir destinatários |
-| Alterar destinatários dos avisos | `service.js`, função `communicate` | Notificações por usuário, e-mails e ausência de duplicação |
-| Alterar o horário da verificação | `server.js`, chamada `cron.schedule` | Manter explícito o fuso `America/Sao_Paulo` |
-| Alterar permissões | `app.js`, funções de validação dos perfis | Testar uma requisição permitida e outra recusada |
-| Incluir um campo no requisito | `database.js`, `app.js` e frontend | Migração, leitura, gravação, formulário e snapshot das novas auditorias |
-| Alterar a identificação do documento externo | `database.js`, `app.js`, `service.js` e frontend | Snapshot imutável, auditorias antigas, NCs e mensagens |
-| Incluir uma rota de consulta | `app.js` e, se necessário, `service.js` | Contrato JSON, perfil permitido e teste HTTP |
-| Alterar o texto do checklist | `domain.js` e migração em `database.js` | Preservar as auditorias já realizadas |
+| Mudança                                      | Arquivos principais                                                | Conferências adicionais                                                  |
+| -------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Alterar cálculo de aderência                 | `domain.js`, função `adherence`                                    | Testes de percentuais e painel em `service.js`                           |
+| Alterar prazo de escalonamento               | `domain.js`, função `escalationLevel`                              | Testar o dia anterior, o limite e o dia seguinte; conferir destinatários |
+| Alterar destinatários dos avisos             | `service.js`, função `communicate`                                 | Notificações por usuário, e-mails e ausência de duplicação               |
+| Alterar o horário da verificação             | `server.js`, chamada `cron.schedule`                               | Manter explícito o fuso `America/Sao_Paulo`                              |
+| Alterar permissões                           | `app.js` e arquivo correspondente em `routes/`                     | Testar uma requisição permitida e outra recusada                         |
+| Incluir um campo no requisito                | `database.js`, `routes/requirements.js` e frontend                 | Migração, leitura, gravação, formulário e snapshot das novas auditorias  |
+| Alterar a identificação do documento externo | `database.js`, `routes/audits.js`, `service.js` e frontend         | Snapshot imutável, auditorias antigas, NCs e mensagens                   |
+| Incluir uma rota de consulta                 | arquivo correspondente em `routes/` e, se necessário, `service.js` | Contrato JSON, perfil permitido e teste HTTP                             |
+| Alterar o texto do checklist                 | `domain.js` e migração em `database.js`                            | Preservar as auditorias já realizadas                                    |
 
 ## 5 Entender as regras que devem permanecer consistentes
 
@@ -227,15 +230,15 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:3001/api/health'
 
 O retorno deve identificar `application: ReqAudit` e `status: ok`. Em seguida, execute o fluxo afetado e confira seu resultado, uma entrada inválida, as permissões e a persistência após reinício.
 
-| Sintoma | Verificação inicial |
-| --- | --- |
-| O código mudou, mas o comportamento continua igual | Reiniciar o processo Node; para frontend na porta 3001, gerar o build novamente |
-| Erro EADDRINUSE | Encerrar a outra instância que já ocupa a porta 3001 |
-| Nova rota retorna 404 | Conferir `/api`, método HTTP, posição da rota antes do tratamento 404 e reinício do backend |
-| Resposta 401 | Conferir login, cookie da sessão e prazo de validade |
-| Resposta 403 | Conferir o papel do usuário autenticado e as validações da rota |
-| Coluna nova não existe | Conferir se a migração foi aplicada à base utilizada |
-| Percentual parece incorreto | Conferir `conforming`, `total` e `pending`; o cálculo inclui os 15 itens |
-| E-mail não foi enviado | Conferir modo simulado, status da caixa de saída e configuração SMTP |
+| Sintoma                                            | Verificação inicial                                                                         |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| O código mudou, mas o comportamento continua igual | Reiniciar o processo Node; para frontend na porta 3001, gerar o build novamente             |
+| Erro EADDRINUSE                                    | Encerrar a outra instância que já ocupa a porta 3001                                        |
+| Nova rota retorna 404                              | Conferir `/api`, método HTTP, posição da rota antes do tratamento 404 e reinício do backend |
+| Resposta 401                                       | Conferir login, cookie da sessão e prazo de validade                                        |
+| Resposta 403                                       | Conferir o papel do usuário autenticado e as validações da rota                             |
+| Coluna nova não existe                             | Conferir se a migração foi aplicada à base utilizada                                        |
+| Percentual parece incorreto                        | Conferir `conforming`, `total` e `pending`; o cálculo inclui os 15 itens                    |
+| E-mail não foi enviado                             | Conferir modo simulado, status da caixa de saída e configuração SMTP                        |
 
 Ao terminar, registre no README o comportamento que mudou, a configuração necessária e os testes executados. Mantenha o roteiro de demonstração coerente com a versão que será apresentada.

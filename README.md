@@ -1,135 +1,161 @@
 # ReqAudit
 
-Aplicação local para auditoria de qualidade de requisitos funcionais, implementada a partir de `ReqAudit_Auditoria_Requisitos_Funcionais.docx`. O auditor avalia os requisitos; o sistema registra os resultados, calcula a aderência, acompanha as não conformidades e comunica o tratamento.
+O ReqAudit é uma aplicação web para avaliar a qualidade de requisitos funcionais, registrar não conformidades e acompanhar a correção dos problemas encontrados.
 
-## Executar no Windows
+[Repositório no GitHub](https://github.com/VantuilPJr/ReqAudit)
 
-Na pasta **Qualidade**, abra **INICIAR_REQAUDIT.cmd** com dois cliques. O navegador abrirá diretamente a tela de login em **http://localhost:3001**. Mantenha a janela do aplicativo aberta; use **Ctrl+C** para encerrar. Os dados permanecem salvos ao fechar.
+## Sobre o projeto
 
-As dependências e a versão compilada já foram preparadas neste computador. Para instalar em outro computador, utilize Node.js **22.18 ou superior** e execute na pasta `req-audit`:
+O sistema atende auditor, responsável pela correção, gestor e administrador. Uma auditoria pode partir de um requisito cadastrado ou de um documento externo, como PDF, material impresso ou item do Jira. O auditor responde aos 15 itens do checklist com **Conforme** ou **Não conforme**, e cada reprovação pode originar uma não conformidade com responsável, prazo, histórico e evidência de correção.
 
-```powershell
+A aplicação funciona localmente, persiste dados em SQLite e mantém os anexos no computador. O envio de e-mail é opcional: no modo simulado, as mensagens ficam visíveis na caixa de saída; com SMTP habilitado, o Nodemailer dispara a comunicação ao responsável.
+
+## Funcionalidades
+
+- Autenticação por e-mail e senha, com sessão em cookie `HttpOnly`.
+- Perfis Administrador, Auditor, Responsável e Gestor.
+- Cadastro e edição de requisitos funcionais.
+- Auditoria de requisito cadastrado ou documento externo sem cadastro prévio.
+- Checklist binário com 15 itens e cálculo de aderência.
+- Anexo do documento avaliado à auditoria.
+- Registro, atribuição e acompanhamento de não conformidades.
+- Histórico de tratamento, correção e validação pelo auditor.
+- Notificações internas, caixa de saída e envio SMTP opcional.
+- Escalonamento diário de prazos e verificação manual pelo administrador.
+- Persistência das auditorias e de seus snapshots no SQLite.
+
+## Tecnologias
+
+**Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Base UI e Lucide.
+
+**Backend:** Node.js, Express, SQLite nativo, Nodemailer, Multer e node-cron.
+
+**Qualidade:** Node Test Runner, TypeScript, Oxlint e Oxfmt.
+
+## Arquitetura
+
+```text
+frontend/
+  api/                 cliente HTTP e chamadas por domínio
+  components/          layout, tabelas, diálogo e componentes compartilhados
+  features/audits/     controles específicos das auditorias
+  pages/               telas por fluxo do produto
+  types/               entidades do domínio
+  utils/               formatação e rótulos
+backend/
+  middleware/          autenticação de sessão
+  routes/              rotas agrupadas por domínio
+  app.js               composição do Express
+  database.js          schema, migrações e dados de demonstração
+  domain.js            regras puras de aderência, datas e escalonamento
+  service.js           consultas e operações do processo
+  mail.js              configuração e processamento do SMTP
+```
+
+O `frontend/main.tsx` inicializa o React. O estado de alto nível e a navegação ficam em `frontend/App.tsx`; cada página concentra a apresentação de um fluxo. No backend, `app.js` monta os middlewares e registra os grupos de rotas, enquanto as regras e a persistência permanecem em módulos próprios.
+
+## Executar localmente
+
+Requisitos: Node.js **22.18 ou superior**.
+
+```bash
+git clone https://github.com/VantuilPJr/ReqAudit.git
+cd ReqAudit
 npm install
 npm run build
 npm start
 ```
 
-O servidor atende somente em `127.0.0.1`. O acesso exige e-mail e senha; a sessão é mantida em cookie `HttpOnly` e os dados, inclusive usuários e sessões, ficam no SQLite local.
+Abra [http://localhost:3001](http://localhost:3001). No Windows, o arquivo `INICIAR_REQAUDIT.cmd`, localizado um nível acima da pasta do repositório nesta instalação, executa o mesmo fluxo.
 
-Credenciais iniciais de demonstração:
+Para desenvolver com atualização automática do frontend:
 
-- Administrador: `admin@reqaudit.com` / `12345678`
-- Responsável: `joao@example.test` / `Responsavel@123`
+```bash
+npm run dev
+```
 
-O administrador pode alterar nomes, e-mails e senhas na página **Usuários**.
+A interface de desenvolvimento abre em `http://127.0.0.1:5173` e encaminha `/api` ao backend na porta 3001.
 
-## Fluxo de uso
+### Contas de demonstração
 
-1. Acesse o sistema com uma conta autorizada e abra **Nova auditoria**.
-2. Para avaliar um PDF, documento impresso, item do Jira ou outra fonte, escolha **Documento externo** e informe o nome, tipo e, quando houver, código, versão, referência e trecho avaliado. Não é necessário cadastrar cada requisito antes. Para usar o fluxo anterior, escolha **Requisito cadastrado**.
-3. A auditoria preserva a identificação informada e recebe os 15 itens do checklist, sem respostas herdadas.
-4. Marque **Conforme** ou **Não conforme** em cada item. Salve observações quando necessário. Ao reprovar um item, o formulário de NC já vem vinculado ao documento e ao item; é possível registrar depois.
-5. Responda todos os itens e finalize. Observações ainda em edição são salvas junto com a finalização em uma única transação. A auditoria finalizada permanece preservada. Uma nova auditoria pode reavaliar uma versão corrigida do documento.
-6. Abra uma NC, acompanhe prazo e responsável, inicie o tratamento e registre a evidência da correção. O auditor verifica a evidência e confirma a resolução.
-7. Saia da conta do auditor e entre como **Administrador** para executar **Verificar prazos**, gerenciar usuários, configurar SMTP e consultar a **Caixa de saída**.
+| Perfil        | E-mail               | Senha             |
+| ------------- | -------------------- | ----------------- |
+| Administrador | `admin@reqaudit.com` | `12345678`        |
+| Auditor       | `maria@example.test` | `Auditor@123`     |
+| Responsável   | `joao@example.test`  | `Responsavel@123` |
 
-## Dados da demonstração
+Essas credenciais servem somente para a demonstração local. O administrador pode alterar os dados na tela **Usuários e acessos**.
 
-- RF-001 Realizar login, RF-002 Cadastrar usuário e RF-003 Recuperar senha.
-- Em uma base nova, auditoria AUD-001 finalizada com **13 conformes e 2 não conformes: 86,67%**.
-- AUD-002 finalizada e AUD-003 em andamento.
-- NC-001 vencida há dois dias na criação da base, pronta para demonstrar escalonamento ao nível 2.
-- NC-002 com prazo três dias após a criação da base.
-- Maria é auditora; João e Ana são responsáveis; Pedro é líder; Carla é gerente; Administrador controla a verificação manual.
+## Variáveis de ambiente
 
-Os dados de exemplo são criados somente na primeira execução. As datas não são redefinidas em cada reinício.
+Copie `.env.example` para `.env` quando quiser mudar a configuração local. A configuração SMTP salva pelo administrador na interface tem prioridade sobre o arquivo.
 
-## Regras implementadas
+| Variável           | Uso                                                      |
+| ------------------ | -------------------------------------------------------- |
+| `PORT`             | Porta do servidor; padrão `3001`                         |
+| `DATABASE_PATH`    | Caminho do arquivo SQLite; padrão `data/reqaudit.sqlite` |
+| `ATTACHMENTS_PATH` | Diretório dos anexos; padrão `data/attachments`          |
+| `SMTP_ENABLED`     | Ativa o envio real quando `true`                         |
+| `SMTP_HOST`        | Host do servidor SMTP                                    |
+| `SMTP_PORT`        | Porta SMTP; padrão `587`                                 |
+| `SMTP_SECURE`      | Usa conexão segura direta quando `true`                  |
+| `SMTP_USER`        | Usuário SMTP                                             |
+| `SMTP_PASS`        | Senha ou App Password SMTP                               |
+| `SMTP_FROM`        | Remetente exibido nos e-mails                            |
 
-**Aderência:** conformes ÷ total de itens × 100, arredondada para duas casas. Todos os 15 itens entram no denominador. Durante a avaliação, itens ainda sem resposta aparecem como pendentes e o indicador é identificado como parcial. A finalização exige uma das duas respostas em cada item. A média do painel considera apenas auditorias finalizadas com aderência numérica.
-
-**Atualização das bases anteriores:** a antiga opção Não aplicável foi removida por definição do escopo. Respostas antigas nessa categoria são convertidas em pendentes, sem receber automaticamente um julgamento de conformidade. As auditorias afetadas voltam a EM_ANDAMENTO e precisam ser concluídas pelo auditor. Observações, demais respostas e NCs permanecem preservadas; os registros anteriores da auditoria ficam guardados na tabela de migrações. Na base demonstrativa original, AUD-001 passa a ter 12 conformes, 2 não conformes e 1 pendente, com aderência parcial de 80%.
-
-**Rastreabilidade:** a auditoria pode partir de um requisito cadastrado ou diretamente de um documento externo. Para fontes externas, preserva tipo, nome, código ou chave, versão, referência e escopo avaliado; para requisitos cadastrados, preserva o snapshot completo. O documento identificado acompanha auditoria, NC e comunicação. Cada item pode gerar uma NC; chamadas repetidas retornam a existente. Um item que já possui NC mantém sua classificação original, mesmo após a correção. As mudanças de NC geram histórico e comunicação em transação.
-
-**Prazos:** vencem ao fim da data civil de São Paulo. Uma NC que vence hoje está no prazo. Atraso é independente de status. Níveis: 0 dentro do prazo; 1 a partir de um dia; 2 a partir de dois dias; 3 a partir de cinco dias. Nível 1 comunica responsável e auditor; nível 2 inclui líder; nível 3 inclui também gerente. A verificação repetida no mesmo nível não duplica mensagens. NCs em tratamento preservam esse status; NCs abertas passam a escalonadas. Resolvidas saem do cálculo de atraso.
-
-**Alteração de prazo:** exige justificativa, recalcula o nível e conserva o histórico anterior. Um prazo futuro remove o atraso atual e zera o nível. Se a NC estava ESCALONADA, volta a ABERTA; EM_TRATAMENTO é preservado.
-
-**Agendamento:** `node-cron` verifica diariamente às 08h no fuso `America/Sao_Paulo`, enquanto o aplicativo está em execução. Se ele estiver fechado, use a verificação manual na próxima abertura. A inicialização não consome a demonstração da NC vencida.
+Nunca versione o arquivo `.env` ou credenciais reais.
 
 ## E-mail e notificações
 
-O modo padrão **SIMULADO** registra as mensagens na caixa de saída local e **não envia e-mails reais**. As notificações internas são separadas por destinatário. A caixa de saída global está disponível no perfil Administrador.
+Ao criar ou atualizar uma não conformidade, o backend grava a notificação interna e a mensagem da caixa de saída na mesma transação. Se o SMTP estiver habilitado, tenta enviar a mensagem imediatamente; o processamento periódico a cada 15 segundos trata mensagens ainda pendentes. Falhas ficam registradas para consulta do administrador.
 
-A interface atualiza os avisos a cada 15 segundos, ao navegar e ao retomar o foco da janela. Observações não salvas são mantidas durante a navegação dentro do aplicativo; ao fechar ou recarregar a página, o navegador avisa sobre essas alterações pendentes.
+Para usar Gmail, por exemplo, configure `smtp.gmail.com`, porta `587`, seu usuário e uma App Password. Antes de ativar o envio, substitua os endereços `.test` dos usuários por endereços reais e use **Testar envio** na tela de configurações.
 
-O administrador pode configurar e testar o SMTP em **Configurações de e-mail**. Também é possível usar as variáveis de `.env.example`; a configuração salva na interface tem prioridade. O Nodemailer processa novas mensagens pendentes a cada 15 segundos. Ao registrar uma NC, a notificação interna e o e-mail são direcionados ao responsável escolhido. Como os usuários de exemplo usam endereços `.test`, altere o e-mail do responsável em **Usuários** antes de habilitar o envio real. Mensagens criadas enquanto o modo estava simulado não são enviadas retroativamente. Falhas permanecem com status FALHOU e o motivo registrado.
+## Testes e validação
 
-## Arquitetura e arquivos
-
-| Parte | Implementação |
-| --- | --- |
-| Interface | React, TypeScript, Vite, componentes Shadcn/Base UI, Tailwind e CSS |
-| API | Node.js e Express, organizada em `backend/routes/` e montada em `backend/app.js` |
-| Persistência | SQLite relacional, com chaves estrangeiras, índices e transações, via `node:sqlite` |
-| Regras | `backend/domain.js` e `backend/service.js` |
-| Banco e exemplos | `backend/database.js` |
-| Automação e execução | `backend/server.js` |
-| E-mail | Nodemailer, em `backend/mail.js` |
-| Interface | Bootstrap em `frontend/main.tsx`, orquestração em `frontend/App.tsx`, páginas em `frontend/pages/` e componentes em `frontend/components/` |
-| API da interface | Clientes por domínio em `frontend/api/`, com tratamento comum em `frontend/api/client.ts` |
-| Tipos | Entidades compartilhadas em `frontend/types/domain.ts` |
-| Testes reproduzíveis | `tests/reqaudit.test.js` |
-
-O banco fica em `data/reqaudit.sqlite`. Para fazer backup, encerre o aplicativo e copie a pasta `data`. Para começar uma base nova, com o aplicativo fechado, renomeie a pasta `data` para preservar o backup; a próxima execução criará outra. Prisma era uma sugestão do documento; foi usado o driver SQLite do próprio Node para simplificar a instalação local.
-
-O scaffold de interface preserva arquivos de suporte do Sites, mas a execução local utiliza `vite.local.ts`, `index.html` e o backend Express. A interface separa páginas, componentes, clientes de API, tipos e formatadores sem introduzir camadas artificiais. Não há publicação nem dependência de serviços externos para usar o aplicativo.
-
-## Desenvolvimento e validação
-
-```powershell
-npm run dev        # Interface em http://127.0.0.1:5173 e API em 3001
-npm test           # Testes de domínio, API, persistência e falhas
-npm run typecheck  # Verificação TypeScript
-npm run lint       # Verificação estática do código local
-npm run build      # Compila a interface para dist-local
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
 
-Os testes utilizam banco em memória ou arquivos temporários e não modificam os dados da demonstração. Não execute `npm run dev` e `npm start` simultaneamente: ambos utilizam a porta 3001.
+Os 20 testes cobrem aderência, migrações, login, permissões, auditoria de documentos externos, checklist, criação e tratamento de NCs, escalonamento, notificações, e-mail, transações e persistência. Eles usam bancos temporários e não alteram os dados locais.
 
-## API REST
+## Screenshots
 
-Todos os caminhos abaixo usam o prefixo `/api`. Exceto login e saúde, as rotas exigem uma sessão autenticada.
+![Página exclusiva de login do ReqAudit](docs/screenshots/login.png)
 
-| Métodos | Caminho | Uso |
-| --- | --- | --- |
-| POST | `/auth/login` | Autenticar com e-mail e senha e iniciar sessão |
-| GET | `/auth/me` | Consultar o usuário autenticado |
-| POST | `/auth/logout` | Encerrar a sessão |
-| GET | `/bootstrap` | Dados da interface e notificações do perfil |
-| GET, POST | `/requirements` | Listar e cadastrar requisitos |
-| GET, PUT | `/requirements/:id` | Consultar e editar requisito |
-| GET, POST | `/audits` | Listar e iniciar auditorias de requisito cadastrado ou documento externo |
-| GET | `/audits/:id` | Auditoria, snapshot, resultado e NCs |
-| GET | `/audits/:id/checklist` | Checklist da auditoria |
-| PUT | `/audits/:id/checklist/:itemId` | Resposta e observação |
-| POST | `/audits/:id/finish` | Finalizar auditoria completa |
-| GET, POST | `/non-conformities` | Listar e registrar NCs |
-| GET | `/non-conformities/:id` | Detalhe e histórico |
-| PATCH | `/non-conformities/:id/status` | Iniciar tratamento ou resolver |
-| PATCH | `/non-conformities/:id/responsible` | Alterar responsável |
-| PATCH | `/non-conformities/:id/deadline` | Alterar prazo com justificativa |
-| POST | `/non-conformities/:id/correction` | Registrar evidência de correção |
-| GET | `/non-conformities/:id/history` | Histórico de acompanhamento |
-| POST | `/admin/check-deadlines` | Verificação administrativa idempotente |
-| PATCH | `/admin/users/:id` | Administrar nome, e-mail e senha do usuário |
-| GET, PUT | `/admin/settings` | Consultar ou salvar a configuração SMTP |
-| POST | `/admin/settings/test-email` | Enviar uma mensagem de teste |
-| PATCH | `/notifications/read` | Marcar avisos do perfil como lidos |
+Para completar a apresentação visual do projeto, as próximas capturas recomendadas são:
 
-Consulte `ROTEIRO_DEMONSTRACAO.md` para a apresentação de até três minutos.
+1. Dashboard do auditor.
+2. Checklist de uma auditoria em andamento.
+3. Detalhe e histórico de uma não conformidade.
+4. Configuração de e-mail do administrador.
 
-Para alterar o código, siga `ROTEIRO_EDICAO_BACKEND.md`, com mapa dos arquivos, exemplo de rota, orientações de migração e testes.
+As capturas adicionais devem usar dados de demonstração e ficar em `docs/screenshots/`.
 
-Referências técnicas: [SQLite no Node.js](https://nodejs.org/download/release/latest-v24.x/docs/api/sqlite.html), [Nodemailer SMTP](https://nodemailer.com/smtp), [node-cron](https://nodecron.com/).
+## Publicação
+
+A versão atual foi projetada para execução local. Para publicá-la sem trocar SQLite, anexos locais e o processo contínuo de agendamento, use um serviço com processo Node e volume persistente, como Render, Railway ou Fly.io.
+
+A Vercel executa o Express como uma Function, por isso exige antes estas adaptações:
+
+- migrar SQLite para PostgreSQL, por exemplo Neon ou Supabase;
+- armazenar anexos no Vercel Blob ou S3;
+- substituir o processo `node-cron` por uma rota protegida acionada pelo Vercel Cron;
+- configurar cookie seguro, origem permitida e segredos no ambiente de produção.
+
+Essas mudanças afetam persistência e operação e não foram aplicadas automaticamente nesta versão.
+
+## Documentação complementar
+
+- [Roteiro de demonstração](docs/ROTEIRO_DEMONSTRACAO.md)
+- [Roteiro para editar o backend](docs/ROTEIRO_EDICAO_BACKEND.md)
+
+## Melhorias futuras
+
+- Migrar banco e anexos para serviços adequados a uma demonstração pública.
+- Ampliar os testes de interface e a cobertura de acessibilidade.
+- Revisar responsividade em telas pequenas com testes em dispositivos reais.
+- Adicionar uma estratégia de recuperação de senha antes de uso fora do ambiente acadêmico.

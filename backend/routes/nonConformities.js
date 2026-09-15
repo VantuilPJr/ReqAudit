@@ -1,7 +1,7 @@
 import { transaction } from '../database.js';
 import { STATUSES, SEVERITIES, validDate, escalationLevel, daysLate } from '../domain.js';
 
-export function registerNonConformityRoutes(app, { db, service: s, fail, getAudit, getNC, ownAudit, manageNC, responsible, requireValue, text }) {
+export function registerNonConformityRoutes(app, { db, service: s, fail, getAudit, getNC, ownAudit, manageNC, responsible, requireValue, text, mailer }) {
   app.get('/api/non-conformities', (_, res) =>
     res.json(
       s
@@ -9,7 +9,7 @@ export function registerNonConformityRoutes(app, { db, service: s, fail, getAudi
         .map((n) => s.nc(n.id)),
     ),
   );
-  app.post('/api/non-conformities', (req, res) => {
+  app.post('/api/non-conformities', async (req, res) => {
     const a = getAudit(req.body.auditId);
     ownAudit(req, a);
     const item = a.answers.find(
@@ -55,6 +55,7 @@ export function registerNonConformityRoutes(app, { db, service: s, fail, getAudi
       s.communicate(s.nc(id), 'Nova não conformidade atribuída.');
       return id;
     });
+    await mailer?.();
     res.status(201).json(s.nc(id));
   });
   app.get('/api/non-conformities/:id', (req, res) =>
@@ -75,7 +76,7 @@ export function registerNonConformityRoutes(app, { db, service: s, fail, getAudi
       ),
     );
   });
-  app.patch('/api/non-conformities/:id/status', (req, res) => {
+  app.patch('/api/non-conformities/:id/status', async (req, res) => {
     const n = getNC(req.params.id),
       status = req.body.status;
     requireValue(
@@ -125,9 +126,10 @@ export function registerNonConformityRoutes(app, { db, service: s, fail, getAudi
         [n.auditorId],
       );
     });
+    await mailer?.();
     res.json(s.nc(n.id));
   });
-  app.post('/api/non-conformities/:id/correction', (req, res) => {
+  app.post('/api/non-conformities/:id/correction', async (req, res) => {
     const n = getNC(req.params.id);
     if (
       ![n.auditorId, n.responsibleId].includes(req.actor.id) &&
@@ -153,9 +155,10 @@ export function registerNonConformityRoutes(app, { db, service: s, fail, getAudi
         [n.auditorId],
       );
     });
+    await mailer?.();
     res.json(s.nc(n.id));
   });
-  app.patch('/api/non-conformities/:id/responsible', (req, res) => {
+  app.patch('/api/non-conformities/:id/responsible', async (req, res) => {
     const n = getNC(req.params.id);
     manageNC(req, n);
     requireValue(
@@ -180,9 +183,10 @@ export function registerNonConformityRoutes(app, { db, service: s, fail, getAudi
           n.auditorId,
         ]);
       });
+    await mailer?.();
     res.json(s.nc(n.id));
   });
-  app.patch('/api/non-conformities/:id/deadline', (req, res) => {
+  app.patch('/api/non-conformities/:id/deadline', async (req, res) => {
     const n = getNC(req.params.id);
     manageNC(req, n);
     requireValue(
@@ -210,6 +214,7 @@ export function registerNonConformityRoutes(app, { db, service: s, fail, getAudi
         );
         s.communicate(s.nc(n.id), 'Prazo atualizado.', level, [n.auditorId]);
       });
+    await mailer?.();
     res.json(s.nc(n.id));
   });
 }

@@ -7,8 +7,8 @@ import { createApp } from './app.js';
 import { createMailer } from './mail.js';
 const db = openDatabase();
 seed(db);
-const { app, service } = createApp(db),
-  flush = createMailer(db);
+const flush = createMailer(db);
+const { app, service } = createApp(db, { mailer: flush });
 app.use(
   express.static(fileURLToPath(new URL('../dist-local', import.meta.url))),
 );

@@ -2,7 +2,7 @@ import { hashPassword } from '../auth.js';
 import { transaction } from '../database.js';
 import { getMailConfig, sendTestEmail } from '../mail.js';
 
-export function registerAdminRoutes(app, { db, service: s, requireRole, requireValue, text, publicUser }) {
+export function registerAdminRoutes(app, { db, service: s, requireRole, requireValue, text, publicUser, mailer }) {
   app.get('/api/admin/settings', (req, res) => {
     requireRole(req, ['ADMIN']);
     const cfg = getMailConfig(db);
@@ -86,8 +86,10 @@ export function registerAdminRoutes(app, { db, service: s, requireRole, requireV
     );
   });
 
-  app.post('/api/admin/check-deadlines', (req, res) => {
+  app.post('/api/admin/check-deadlines', async (req, res) => {
     requireRole(req, ['ADMIN']);
-    res.json(s.escalate());
+    const result = s.escalate();
+    await mailer?.();
+    res.json(result);
   });
 }

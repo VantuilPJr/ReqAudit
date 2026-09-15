@@ -11,6 +11,11 @@ export function registerAuditRoutes(app, { db, service: s, upload, fail, getAudi
       ['REQUISITO', 'DOCUMENTO'].includes(sourceType),
       'Origem da auditoria inválida.',
     );
+    requireValue(
+      (typeof body.auditorId === 'number' || typeof body.auditorId === 'string') &&
+        Number.isInteger(Number(body.auditorId)) && Number(body.auditorId) > 0,
+      'Selecione um único auditor responsável.',
+    );
     const auditor = s.get(
       'SELECT * FROM users WHERE id=?',
       Number(body.auditorId),
@@ -65,19 +70,28 @@ export function registerAuditRoutes(app, { db, service: s, upload, fail, getAudi
     res.status(201).json(s.audit(id));
   });
   app.post('/api/audits/:id/attachment', upload.single('file'), (req, res) => {
-    const a = getAudit(req.params.id);
-    ownAudit(req, a);
-    if (!req.file) fail('Nenhum arquivo enviado.');
-    if (a.attachmentPath && existsSync(a.attachmentPath)) {
-      try { unlinkSync(a.attachmentPath); } catch {}
+    let saved = false;
+    try {
+      const a = getAudit(req.params.id);
+      ownAudit(req, a);
+      if (!req.file) fail('Nenhum arquivo enviado.');
+      s.run(
+        'UPDATE audits SET attachmentPath=?,attachmentName=? WHERE id=?',
+        req.file.path,
+        req.file.originalname,
+        a.id,
+      );
+      saved = true;
+      if (a.attachmentPath && existsSync(a.attachmentPath)) {
+        try { unlinkSync(a.attachmentPath); } catch {}
+      }
+      res.json(s.audit(a.id));
+    } catch (error) {
+      if (!saved && req.file?.path && existsSync(req.file.path)) {
+        try { unlinkSync(req.file.path); } catch {}
+      }
+      throw error;
     }
-    s.run(
-      'UPDATE audits SET attachmentPath=?,attachmentName=? WHERE id=?',
-      req.file.path,
-      req.file.originalname,
-      a.id,
-    );
-    res.json(s.audit(a.id));
   });
   app.delete('/api/audits/:id/attachment', (req, res) => {
     const a = getAudit(req.params.id);

@@ -10,7 +10,7 @@ import { registerAuditRoutes } from './routes/audits.js';
 import { registerNonConformityRoutes } from './routes/nonConformities.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 
-export function createApp(db, { allowTestIdentity = false } = {}) {
+export function createApp(db, { allowTestIdentity = false, mailer } = {}) {
   const app = express();
   const service = createService(db);
 
@@ -64,6 +64,7 @@ export function createApp(db, { allowTestIdentity = false } = {}) {
     ownAudit,
     manageNC,
     responsible,
+    mailer,
   };
   registerAuthRoutes(app, context);
   registerAdminRoutes(app, context);

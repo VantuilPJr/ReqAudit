@@ -21,10 +21,10 @@ import {
   validDate,
 } from '../backend/domain.js';
 import { createMailer } from '../backend/mail.js';
-async function fixture(t, database) {
+async function fixture(t, database, options = {}) {
   const db = database || openDatabase(':memory:');
   seed(db);
-  const { app, service } = createApp(db, { allowTestIdentity: true });
+  const { app, service } = createApp(db, { allowTestIdentity: true, ...options });
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api`;
@@ -366,6 +366,10 @@ test('migração permite documentos externos e preserva auditorias e respostas a
 });
 test('auditorias independentes, apenas duas respostas aceitas e finalização completa', async (t) => {
   const { request } = await fixture(t);
+  assert.equal(
+    (await request('/audits', 'POST', { requirementId: 1, auditorId: [1] })).status,
+    400,
+  );
   const first = (
     await request('/audits', 'POST', { requirementId: 1, auditorId: 1 })
   ).body;
@@ -443,7 +447,10 @@ test('NC exige item reprovado e criação repetida não duplica registros', asyn
   );
 });
 test('nova NC notifica o responsável no sistema e prepara o e-mail cadastrado', async (t) => {
-  const { request, service } = await fixture(t);
+  let mailFlushes = 0;
+  const { request, service } = await fixture(t, undefined, {
+    mailer: async () => { mailFlushes++; },
+  });
   service.run(
     "UPDATE settings SET value='true' WHERE key='smtp_enabled'",
   );
@@ -473,6 +480,7 @@ test('nova NC notifica o responsável no sistema e prepara o e-mail cadastrado',
   );
   assert.equal(email.recipient, 'joao@example.test');
   assert.equal(email.status, 'PENDENTE');
+  assert.equal(mailFlushes, 1);
 });
 test('fluxo de tratamento, evidência, validação pelo auditor e histórico', async (t) => {
   const { request, service } = await fixture(t);
