@@ -59,9 +59,16 @@ export function registerAdminRoutes(app, { db, service: s, requireRole, requireV
     requireValue(user, 'Usuário não encontrado.');
     const name = text(req.body?.name, 'Nome', true);
     const email = text(req.body?.email, 'E-mail', true).toLowerCase();
+    const notificationEmail = req.body?.notificationEmail === undefined
+      ? user.notificationEmail || ''
+      : text(req.body.notificationEmail, 'E-mail para notificações').toLowerCase();
     requireValue(
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
       'Informe um e-mail válido.',
+    );
+    requireValue(
+      !notificationEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notificationEmail),
+      'Informe um e-mail válido para notificações.',
     );
     const password = req.body?.password;
     if (password !== undefined && password !== '')
@@ -73,9 +80,10 @@ export function registerAdminRoutes(app, { db, service: s, requireRole, requireV
       );
     transaction(db, () => {
       s.run(
-        'UPDATE users SET name=?,email=?,passwordHash=? WHERE id=?',
+        'UPDATE users SET name=?,email=?,notificationEmail=?,passwordHash=? WHERE id=?',
         name,
         email,
+        notificationEmail,
         password ? hashPassword(password) : user.passwordHash,
         user.id,
       );

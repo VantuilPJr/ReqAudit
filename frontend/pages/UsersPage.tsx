@@ -23,13 +23,14 @@ export function UsersPage({ users, emailMode, onEdit }: Props) {
       </div>
       <section className="panel users-panel">
         <Table>
-          <TableHeader><TableRow><TableHead>Usuário</TableHead><TableHead>Perfil</TableHead><TableHead>E-mail</TableHead><TableHead><span className="sr-only">Editar</span></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Usuário</TableHead><TableHead>Perfil</TableHead><TableHead>Login</TableHead><TableHead>Notificações</TableHead><TableHead><span className="sr-only">Editar</span></TableHead></TableRow></TableHeader>
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell><strong>{user.name}</strong></TableCell>
                 <TableCell><StatusBadge value={user.role} /></TableCell>
                 <TableCell>{user.email}</TableCell>
+                <TableCell>{user.notificationEmail || user.email}</TableCell>
                 <TableCell><Button variant="outline" onClick={() => onEdit(user)}>Editar</Button></TableCell>
               </TableRow>
             ))}

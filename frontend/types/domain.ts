@@ -14,6 +14,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  notificationEmail?: string;
   role: UserRole;
   managementLevel: 'LIDER' | 'GERENTE' | null;
 }
@@ -141,6 +142,7 @@ export interface OutboxMessage {
   recipient: string;
   subject: string;
   body: string;
+  htmlBody: string;
   status: 'PENDENTE' | 'SIMULADO' | 'ENVIADO' | 'FALHOU';
   createdAt: string;
   sentAt: string | null;

@@ -79,10 +79,6 @@ export function AppShell({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <div className="sidebar-note">
-            <span className="live-dot" /> Ambiente local
-            <small>Dados salvos neste computador</small>
-          </div>
           <div className="version">ReqAudit <span>v1.0</span></div>
         </SidebarFooter>
       </Sidebar>

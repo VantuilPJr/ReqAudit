@@ -61,7 +61,7 @@ export function RecordDialog({ modal, setModal, busy, mutate, data, user, detail
                   : modal.type === 'nc'
                     ? `${modal.requirementCode} · Item ${modal.checklistItemId}: ${modal.itemDescription}`
                     : modal.type === 'user'
-                      ? 'O e-mail do responsável é usado nas notificações e no envio das correções.'
+                      ? 'O e-mail de login pode ser diferente do endereço que recebe os avisos das não conformidades.'
                     : modal.type === 'resolve'
                       ? 'Confirme que você verificou a evidência e que a correção resolve o problema identificado.'
                       : 'Preencha as informações abaixo para salvar o registro.'}
@@ -78,6 +78,7 @@ export function RecordDialog({ modal, setModal, busy, mutate, data, user, detail
                       {
                         name: m.name,
                         email: m.email,
+                        notificationEmail: m.notificationEmail,
                         password: m.password,
                       },
                       'Usuário atualizado.',
@@ -168,6 +169,15 @@ export function RecordDialog({ modal, setModal, busy, mutate, data, user, detail
                       value={displayText(modal.email)}
                       onChange={(value) =>
                         setModal({ ...modal, email: value })
+                      }
+                    />
+                    <Field
+                      label="E-mail para notificações"
+                      type="email"
+                      value={displayText(modal.notificationEmail)}
+                      hint="Se ficar vazio, os avisos serão enviados ao e-mail de login."
+                      onChange={(value) =>
+                        setModal({ ...modal, notificationEmail: value })
                       }
                     />
                     <Field

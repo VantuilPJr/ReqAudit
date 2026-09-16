@@ -1,6 +1,13 @@
-import { createSessionToken, hashSessionToken, verifyPassword } from '../auth.js';
+import {
+  createSignedSessionToken,
+  hashSessionToken,
+  verifyPassword,
+} from '../auth.js';
 import { transaction } from '../database.js';
 import { getMailConfig } from '../mail.js';
+
+const secureCookie =
+  process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
 export function registerPublicAuthRoutes(app, { db, service: s, text, fail, publicUser }) {
   app.get('/api/health', (_, res) =>
@@ -21,9 +28,9 @@ export function registerPublicAuthRoutes(app, { db, service: s, text, fail, publ
       !verifyPassword(password, user.passwordHash)
     )
       fail('E-mail ou senha inválidos.', 401);
-    const token = createSessionToken();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const token = createSignedSessionToken(user.id, expiresAt);
     transaction(db, () => {
       s.run('DELETE FROM sessions WHERE expiresAt<=?', now.toISOString());
       s.run(
@@ -37,7 +44,7 @@ export function registerPublicAuthRoutes(app, { db, service: s, text, fail, publ
     res.cookie('reqaudit_session', token, {
       httpOnly: true,
       sameSite: 'strict',
-      secure: false,
+      secure: secureCookie,
       path: '/',
       maxAge: expiresAt.getTime() - now.getTime(),
     });
@@ -54,17 +61,20 @@ export function registerAuthRoutes(app, { db, service: s, publicUser }) {
     res.clearCookie('reqaudit_session', {
       httpOnly: true,
       sameSite: 'strict',
-      secure: false,
+      secure: secureCookie,
       path: '/',
     });
     res.json({ ok: true });
   });
   app.get('/api/bootstrap', (req, res) => {
     const cfg = getMailConfig(db);
+    const users = s.all(
+      req.actor.role === 'ADMIN'
+        ? 'SELECT id,name,email,notificationEmail,role,managementLevel FROM users ORDER BY name'
+        : 'SELECT id,name,email,role,managementLevel FROM users ORDER BY name',
+    );
     res.json({
-      users: s.all(
-        'SELECT id,name,email,role,managementLevel FROM users ORDER BY name',
-      ),
+      users,
       requirements: s.all('SELECT * FROM requirements ORDER BY id'),
       audits: s
         .all('SELECT id FROM audits ORDER BY id DESC')

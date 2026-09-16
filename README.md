@@ -84,7 +84,9 @@ A interface de desenvolvimento abre em `http://127.0.0.1:5173` e encaminha `/api
 | Auditor       | `maria@example.test` | `Auditor@123`     |
 | Responsável   | `joao@example.test`  | `Responsavel@123` |
 
-Essas credenciais servem somente para a demonstração local. O administrador pode alterar os dados na tela **Usuários e acessos**.
+Essas credenciais são criadas apenas em uma base nova e servem para a demonstração local. O administrador pode alterar os dados na tela **Usuários e acessos**.
+
+No deploy do Vercel, a base inicial usa as contas configuradas em `VERCEL_SEED_USERS`; essa variável deve conter um array JSON com `id`, `name`, `email`, `notificationEmail`, `role` e, opcionalmente, `managementLevel`. O valor de `VERCEL_SEED_PASSWORD` define a senha inicial das contas. Esses dados ficam somente nas variáveis protegidas do Vercel.
 
 ## Variáveis de ambiente
 
@@ -102,12 +104,20 @@ Copie `.env.example` para `.env` quando quiser mudar a configuração local. A c
 | `SMTP_USER`        | Usuário SMTP                                             |
 | `SMTP_PASS`        | Senha ou App Password SMTP                               |
 | `SMTP_FROM`        | Remetente exibido nos e-mails                            |
+| `APP_URL`          | URL pública usada nos links das notificações             |
+| `ALLOWED_ORIGINS`  | Origens adicionais permitidas, separadas por vírgula    |
+| `CRON_SECRET`      | Segredo usado para autorizar o cron de escalonamento     |
+| `SESSION_SECRET`   | Chave usada para assinar sessões entre instâncias       |
+| `VERCEL_SEED_PASSWORD` | Senha inicial das três contas provisionadas no Vercel |
+| `VERCEL_SEED_USERS` | JSON com nomes, logins, perfis e e-mails de notificação do seed |
 
 Nunca versione o arquivo `.env` ou credenciais reais.
 
 ## E-mail e notificações
 
 Ao criar ou atualizar uma não conformidade, o backend grava a notificação interna e a mensagem da caixa de saída na mesma transação. Se o SMTP estiver habilitado, tenta enviar a mensagem imediatamente; o processamento periódico a cada 15 segundos trata mensagens ainda pendentes. Falhas ficam registradas para consulta do administrador.
+
+Em **Usuários e acessos**, o administrador pode definir um e-mail para notificações diferente do e-mail de login. Se esse campo ficar vazio, as mensagens usam o endereço de login. O endereço alternativo de cada pessoa só é exibido para ela e para o administrador.
 
 Para usar Gmail, por exemplo, configure `smtp.gmail.com`, porta `587`, seu usuário e uma App Password. Antes de ativar o envio, substitua os endereços `.test` dos usuários por endereços reais e use **Testar envio** na tela de configurações.
 
@@ -120,7 +130,7 @@ npm test
 npm run build
 ```
 
-Os 20 testes cobrem aderência, migrações, login, permissões, auditoria de documentos externos, checklist, criação e tratamento de NCs, escalonamento, notificações, e-mail, transações e persistência. Eles usam bancos temporários e não alteram os dados locais.
+Os testes cobrem aderência, migrações, login, permissões, auditoria de documentos externos, checklist, criação e tratamento de NCs, escalonamento, notificações, e-mail, transações e persistência. Eles usam bancos temporários e não alteram os dados locais.
 
 ## Screenshots
 
@@ -135,18 +145,13 @@ Para completar a apresentação visual do projeto, as próximas capturas recomen
 
 As capturas adicionais devem usar dados de demonstração e ficar em `docs/screenshots/`.
 
-## Publicação
+## Publicação no Vercel
 
-A versão atual foi projetada para execução local. Para publicá-la sem trocar SQLite, anexos locais e o processo contínuo de agendamento, use um serviço com processo Node e volume persistente, como Render, Railway ou Fly.io.
+O repositório já inclui o adaptador `api/index.js` e o `vercel.json`. No painel do Vercel, importe o repositório, mantenha `npm run build` como comando de build e use `dist-local` como diretório de saída. O projeto usa Node.js 22 e encaminha `/api/*` para a Function do Express; as demais rotas entregam o `index.html` da aplicação.
 
-A Vercel executa o Express como uma Function, por isso exige antes estas adaptações:
+Configure no projeto as variáveis `APP_URL`, `ALLOWED_ORIGINS` (a URL pública, sem barra final), `SESSION_SECRET` e `CRON_SECRET`. A sessão é assinada para continuar válida quando outra instância da Function atender a próxima navegação. Para habilitar e-mails, acrescente `SMTP_ENABLED=true`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`. O cron diário de escalonamento chama `/api/internal/cron/escalate` e só aceita o segredo enviado pelo Vercel.
 
-- migrar SQLite para PostgreSQL, por exemplo Neon ou Supabase;
-- armazenar anexos no Vercel Blob ou S3;
-- substituir o processo `node-cron` por uma rota protegida acionada pelo Vercel Cron;
-- configurar cookie seguro, origem permitida e segredos no ambiente de produção.
-
-Essas mudanças afetam persistência e operação e não foram aplicadas automaticamente nesta versão.
+Sem uma base externa, a Function usa SQLite e anexos em `/tmp` apenas como fallback de demonstração. Esse diretório é temporário e pode ser apagado quando a instância for recriada, portanto não oferece persistência para produção. Para uso real, migre o banco para PostgreSQL (Neon/Supabase) e os anexos para Vercel Blob ou S3 antes de cadastrar dados definitivos.
 
 ## Documentação complementar
 

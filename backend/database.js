@@ -4,18 +4,54 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CHECKLIST, dateOffset } from './domain.js';
 import { defaultPassword, hashPassword } from './auth.js';
+const vercelRuntime = process.env.VERCEL === '1';
+const vercelSeedPassword =
+  process.env.VERCEL_SEED_PASSWORD || defaultPassword('ADMIN');
+
+function vercelSeedUsers() {
+  try {
+    const configured = JSON.parse(process.env.VERCEL_SEED_USERS || '[]');
+    if (!Array.isArray(configured)) return [];
+    return configured
+      .filter(
+        (user) =>
+          Number.isInteger(user?.id) &&
+          typeof user.name === 'string' &&
+          typeof user.email === 'string' &&
+          typeof user.role === 'string',
+      )
+      .map((user) => [
+        user.id,
+        user.name,
+        user.email,
+        user.notificationEmail || '',
+        user.role,
+        user.managementLevel || null,
+        vercelSeedPassword,
+      ]);
+  } catch {
+    return [];
+  }
+}
+
+// Vercel Functions only expose /tmp as a writable directory. It is useful as a
+// demo fallback, but it is intentionally not presented as durable storage.
 export const ATTACHMENTS_DIR =
   process.env.ATTACHMENTS_PATH ||
-  fileURLToPath(new URL('../data/attachments', import.meta.url));
+  (vercelRuntime
+    ? '/tmp/reqaudit-attachments'
+    : fileURLToPath(new URL('../data/attachments', import.meta.url)));
 export function openDatabase(
   filename = process.env.DATABASE_PATH ||
-    fileURLToPath(new URL('../data/reqaudit.sqlite', import.meta.url)),
+    (vercelRuntime
+      ? '/tmp/reqaudit.sqlite'
+      : fileURLToPath(new URL('../data/reqaudit.sqlite', import.meta.url))),
 ) {
   if (filename !== ':memory:')
     mkdirSync(path.dirname(path.resolve(filename)), { recursive: true });
   const db = new DatabaseSync(filename);
   db.exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;
-    CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, role TEXT NOT NULL, managementLevel TEXT, passwordHash TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, notificationEmail TEXT NOT NULL DEFAULT '', role TEXT NOT NULL, managementLevel TEXT, passwordHash TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS requirements (id INTEGER PRIMARY KEY, code TEXT NOT NULL UNIQUE, title TEXT NOT NULL, description TEXT NOT NULL, actor TEXT NOT NULL DEFAULT '', preconditions TEXT NOT NULL DEFAULT '', mainFlow TEXT NOT NULL DEFAULT '', alternativeFlow TEXT NOT NULL DEFAULT '', businessRules TEXT NOT NULL DEFAULT '', acceptanceCriteria TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL, dependencies TEXT NOT NULL DEFAULT '', origin TEXT NOT NULL DEFAULT '', createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS checklist_items (id INTEGER PRIMARY KEY, description TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS audits (id INTEGER PRIMARY KEY, requirementId INTEGER REFERENCES requirements(id), auditorId INTEGER NOT NULL REFERENCES users(id), requirementSnapshot TEXT NOT NULL, sourceType TEXT NOT NULL DEFAULT 'REQUISITO' CHECK(sourceType IN ('REQUISITO','DOCUMENTO')), documentSnapshot TEXT NOT NULL DEFAULT '{}', createdAt TEXT NOT NULL, finishedAt TEXT, status TEXT NOT NULL DEFAULT 'EM_ANDAMENTO', adherencePercentage REAL);
@@ -23,7 +59,7 @@ export function openDatabase(
     CREATE TABLE IF NOT EXISTS non_conformities (id INTEGER PRIMARY KEY, auditId INTEGER NOT NULL, checklistItemId INTEGER NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL, severity TEXT NOT NULL CHECK(severity IN ('BAIXA','MEDIA','ALTA','CRITICA')), responsibleId INTEGER NOT NULL REFERENCES users(id), status TEXT NOT NULL DEFAULT 'ABERTA' CHECK(status IN ('ABERTA','EM_TRATAMENTO','RESOLVIDA','ESCALONADA')), dueDate TEXT NOT NULL, escalationLevel INTEGER NOT NULL DEFAULT 0 CHECK(escalationLevel BETWEEN 0 AND 3), correction TEXT NOT NULL DEFAULT '', createdAt TEXT NOT NULL, resolvedAt TEXT, UNIQUE(auditId, checklistItemId), FOREIGN KEY(auditId, checklistItemId) REFERENCES answers(auditId, checklistItemId));
     CREATE TABLE IF NOT EXISTS nc_history (id INTEGER PRIMARY KEY, nonConformityId INTEGER NOT NULL REFERENCES non_conformities(id), userId INTEGER REFERENCES users(id), action TEXT NOT NULL, description TEXT NOT NULL, createdAt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY, userId INTEGER NOT NULL REFERENCES users(id), nonConformityId INTEGER NOT NULL REFERENCES non_conformities(id), message TEXT NOT NULL, createdAt TEXT NOT NULL, readAt TEXT);
-    CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY, nonConformityId INTEGER NOT NULL REFERENCES non_conformities(id), recipient TEXT NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'SIMULADO', error TEXT, createdAt TEXT NOT NULL, sentAt TEXT);
+    CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY, nonConformityId INTEGER NOT NULL REFERENCES non_conformities(id), recipient TEXT NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, htmlBody TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'SIMULADO', error TEXT, createdAt TEXT NOT NULL, sentAt TEXT);
     CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, createdAt TEXT NOT NULL, expiresAt TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS nc_deadlines ON non_conformities(status, dueDate);
     CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expiresAt);
@@ -31,6 +67,8 @@ export function openDatabase(
   migrateBinaryResults(db);
   migrateExternalDocuments(db);
   migrateAuthentication(db);
+  migrateNotificationEmails(db);
+  migrateOutboxHtml(db);
   migrateAttachments(db);
   migrateSettings(db);
   db.exec('PRAGMA optimize');
@@ -173,6 +211,24 @@ export function migrateAuthentication(db) {
     );
   });
 }
+export function migrateNotificationEmails(db) {
+  const migrationId = '20260915_user_notification_emails';
+  if (db.prepare('SELECT id FROM schema_migrations WHERE id=?').get(migrationId))
+    return;
+  if (!db.prepare('PRAGMA table_info(users)').all().some((column) => column.name === 'notificationEmail'))
+    db.exec("ALTER TABLE users ADD COLUMN notificationEmail TEXT NOT NULL DEFAULT ''");
+  db.prepare('INSERT INTO schema_migrations (id,appliedAt,previousData) VALUES (?,?,?)')
+    .run(migrationId, new Date().toISOString(), '{}');
+}
+export function migrateOutboxHtml(db) {
+  const migrationId = '20260916_outbox_html';
+  if (db.prepare('SELECT id FROM schema_migrations WHERE id=?').get(migrationId))
+    return;
+  if (!db.prepare('PRAGMA table_info(outbox)').all().some((column) => column.name === 'htmlBody'))
+    db.exec("ALTER TABLE outbox ADD COLUMN htmlBody TEXT NOT NULL DEFAULT ''");
+  db.prepare('INSERT INTO schema_migrations (id,appliedAt,previousData) VALUES (?,?,?)')
+    .run(migrationId, new Date().toISOString(), '{}');
+}
 export function migrateAttachments(db) {
   db.exec(
     'CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, appliedAt TEXT NOT NULL, previousData TEXT NOT NULL)',
@@ -239,16 +295,30 @@ export function seed(db) {
   }
   transaction(db, () => {
     const user = db.prepare(
-      'INSERT INTO users (id,name,email,role,managementLevel,passwordHash) VALUES (?,?,?,?,?,?)',
+      'INSERT INTO users (id,name,email,notificationEmail,role,managementLevel,passwordHash) VALUES (?,?,?,?,?,?,?)',
     );
-    [
-      [1, 'Maria Oliveira', 'maria@example.test', 'AUDITOR', null],
-      [2, 'João Silva', 'joao@example.test', 'RESPONSAVEL', null],
-      [3, 'Ana Costa', 'ana@example.test', 'RESPONSAVEL', null],
-      [4, 'Pedro Santos', 'pedro@example.test', 'GESTOR', 'LIDER'],
-      [5, 'Carla Mendes', 'carla@example.test', 'GESTOR', 'GERENTE'],
-      [6, 'Administrador', 'admin@reqaudit.com', 'ADMIN', null],
-    ].forEach((row) => user.run(...row, hashPassword(defaultPassword(row[3]))));
+    const users = vercelRuntime
+      ? vercelSeedUsers().length
+        ? vercelSeedUsers()
+        : [
+            [1, 'Auditor padrão', 'auditor@example.test', '', 'AUDITOR', null, vercelSeedPassword],
+            [2, 'Responsável padrão', 'responsavel@example.test', '', 'RESPONSAVEL', null, vercelSeedPassword],
+            [6, 'Administrador', 'admin@reqaudit.com', '', 'ADMIN', null, vercelSeedPassword],
+          ]
+      : [
+          [1, 'Maria Oliveira', 'maria@example.test', '', 'AUDITOR', null, defaultPassword('AUDITOR')],
+          [2, 'João Silva', 'joao@example.test', '', 'RESPONSAVEL', null, defaultPassword('RESPONSAVEL')],
+          [3, 'Ana Costa', 'ana@example.test', '', 'RESPONSAVEL', null, defaultPassword('RESPONSAVEL')],
+          [4, 'Pedro Santos', 'pedro@example.test', '', 'GESTOR', 'LIDER', defaultPassword('GESTOR')],
+          [5, 'Carla Mendes', 'carla@example.test', '', 'GESTOR', 'GERENTE', defaultPassword('GESTOR')],
+          [6, 'Administrador', 'admin@reqaudit.com', '', 'ADMIN', null, defaultPassword('ADMIN')],
+        ];
+    users.forEach((row) =>
+      user.run(
+        ...row.slice(0, 6),
+        hashPassword(row[6]),
+      ),
+    );
     CHECKLIST.forEach((text, i) =>
       db.prepare('INSERT INTO checklist_items VALUES (?,?)').run(i + 1, text),
     );
@@ -365,7 +435,7 @@ export function seed(db) {
         .prepare(
           'INSERT INTO non_conformities (auditId,checklistItemId,title,description,severity,responsibleId,dueDate,createdAt) VALUES (?,?,?,?,?,?,?,?)',
         )
-        .run(...row, now);
+        .run(...row.slice(0, 5), vercelRuntime ? 2 : row[5], row[6], now);
       const id = Number(result.lastInsertRowid);
       db.prepare(
         'INSERT INTO nc_history (nonConformityId,userId,action,description,createdAt) VALUES (?,1,?,?,?)',
@@ -378,7 +448,7 @@ export function seed(db) {
       db.prepare(
         'INSERT INTO notifications (userId,nonConformityId,message,createdAt) VALUES (?,?,?,?)',
       ).run(
-        row[5],
+        vercelRuntime ? 2 : row[5],
         id,
         `NC-${String(id).padStart(3, '0')} foi atribuída a você.`,
         now,

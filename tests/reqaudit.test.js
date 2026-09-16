@@ -11,7 +11,7 @@ import {
 } from '../backend/database.js';
 import { DatabaseSync } from 'node:sqlite';
 import { createApp } from '../backend/app.js';
-import { createService } from '../backend/service.js';
+import { createService, renderNotificationEmail } from '../backend/service.js';
 import {
   adherence,
   escalationLevel,
@@ -65,6 +65,33 @@ test('aderência inclui todos os 15 itens e diferencia respostas pendentes', () 
     adherence([{ result: null }, { result: 'CONFORME' }]).pending,
     1,
   );
+});
+test('template de notificação gera HTML profissional e escapa conteúdo externo', () => {
+  const rendered = renderNotificationEmail({
+    item: {
+      id: 9,
+      title: '<script>alert(1)</script>',
+      description: 'Descrição <b>não confiável</b>.',
+      documentTitle: 'Documento de acesso',
+      documentCode: 'DOC-009',
+      documentVersion: 'v2',
+      documentReference: 'JIRA-009',
+      documentScope: 'Critérios de aceite',
+      status: 'ABERTA',
+      severity: 'ALTA',
+      dueDate: '2026-09-30',
+      responsibleName: 'Responsável',
+      auditorName: 'Auditor',
+      escalationLevel: 0,
+    },
+    message: 'Nova não conformidade atribuída.',
+    recipientName: 'Pessoa destinatária',
+  });
+  assert.match(rendered.html, /Atualização de não conformidade/);
+  assert.match(rendered.html, /Problema identificado/);
+  assert.match(rendered.html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.doesNotMatch(rendered.html, /<script>/);
+  assert.match(rendered.plain, /Documento avaliado: Documento de acesso · DOC-009 · versão v2/);
 });
 test('migração reabre somente auditorias legadas com pendências e preserva NCs e histórico', async (t) => {
   const template = openDatabase(':memory:');
@@ -239,6 +266,38 @@ test('login cria sessão persistida, protege a API e respeita o perfil', async (
     (await fetch(`${base}/bootstrap`, { headers: { cookie } })).status,
     401,
   );
+});
+test('sessão assinada continua válida ao trocar de instância do backend', async (t) => {
+  const db1 = openDatabase(':memory:');
+  const db2 = openDatabase(':memory:');
+  seed(db1);
+  seed(db2);
+  const server1 = createApp(db1, { allowStatelessSession: true }).app.listen(0, '127.0.0.1');
+  const server2 = createApp(db2, { allowStatelessSession: true }).app.listen(0, '127.0.0.1');
+  await Promise.all([
+    new Promise((resolve) => server1.once('listening', resolve)),
+    new Promise((resolve) => server2.once('listening', resolve)),
+  ]);
+  t.after(async () => {
+    await Promise.all([
+      new Promise((resolve) => server1.close(resolve)),
+      new Promise((resolve) => server2.close(resolve)),
+    ]);
+    db1.close();
+    db2.close();
+  });
+  const base1 = `http://127.0.0.1:${server1.address().port}/api`;
+  const base2 = `http://127.0.0.1:${server2.address().port}/api`;
+  const login = await fetch(`${base1}/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@reqaudit.com', password: '12345678' }),
+  });
+  assert.equal(login.status, 200);
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  const authenticated = await fetch(`${base2}/bootstrap`, { headers: { cookie } });
+  assert.equal(authenticated.status, 200);
+  assert.equal((await authenticated.json()).currentUser.email, 'admin@reqaudit.com');
 });
 test('cadastro, código único e preservação do requisito avaliado', async (t) => {
   const { request } = await fixture(t);
@@ -451,6 +510,17 @@ test('nova NC notifica o responsável no sistema e prepara o e-mail cadastrado',
   const { request, service } = await fixture(t, undefined, {
     mailer: async () => { mailFlushes++; },
   });
+  const edited = await request('/admin/users/2', 'PATCH', {
+    name: 'João Silva',
+    email: 'joao@example.test',
+    notificationEmail: 'joao.notify@example.test',
+  }, 6);
+  assert.equal(edited.status, 200);
+  assert.equal(edited.body.notificationEmail, 'joao.notify@example.test');
+  assert.equal(
+    (await request('/bootstrap', 'GET', undefined, 1)).body.users.find((u) => u.id === 2).notificationEmail,
+    undefined,
+  );
   service.run(
     "UPDATE settings SET value='true' WHERE key='smtp_enabled'",
   );
@@ -475,11 +545,15 @@ test('nova NC notifica o responsável no sistema e prepara o e-mail cadastrado',
     ),
   );
   const email = service.get(
-    'SELECT recipient,status FROM outbox WHERE nonConformityId=?',
+    'SELECT recipient,status,body,htmlBody FROM outbox WHERE nonConformityId=?',
     created.body.id,
   );
-  assert.equal(email.recipient, 'joao@example.test');
+  assert.equal(email.recipient, 'joao.notify@example.test');
   assert.equal(email.status, 'PENDENTE');
+  assert.match(email.body, /Problema identificado:/);
+  assert.match(email.htmlBody, /Atualização de não conformidade/);
+  assert.match(email.htmlBody, /Problema identificado/);
+  assert.match(email.htmlBody, /João Silva/);
   assert.equal(mailFlushes, 1);
 });
 test('fluxo de tratamento, evidência, validação pelo auditor e histórico', async (t) => {

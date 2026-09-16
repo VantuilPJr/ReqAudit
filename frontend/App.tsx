@@ -397,7 +397,7 @@ export function App() {
             <UsersPage
               users={data.users as unknown as User[]}
               emailMode={data.emailMode as 'SMTP' | 'SIMULADO'}
-              onEdit={(selectedUser) => setModal({ type: 'user', id: selectedUser.id, name: selectedUser.name, email: selectedUser.email, password: '' })}
+              onEdit={(selectedUser) => setModal({ type: 'user', id: selectedUser.id, name: selectedUser.name, email: selectedUser.email, notificationEmail: selectedUser.notificationEmail || '', password: '' })}
             />
           )}
           {page === 'settings' && isAdmin && (
@@ -443,6 +443,5 @@ export function App() {
     </SidebarProvider>
   );
 }
-
 
 

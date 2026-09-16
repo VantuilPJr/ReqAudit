@@ -10,16 +10,39 @@ import { registerAuditRoutes } from './routes/audits.js';
 import { registerNonConformityRoutes } from './routes/nonConformities.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 
-export function createApp(db, { allowTestIdentity = false, mailer } = {}) {
+export function createApp(
+  db,
+  { allowTestIdentity = false, allowStatelessSession = false, mailer } = {},
+) {
   const app = express();
   const service = createService(db);
 
+  const localOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+  const configuredOrigins = new Set(
+    (process.env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((origin) => origin.trim().replace(/\/$/, ''))
+      .filter(Boolean),
+  );
+  for (const host of [
+    process.env.VERCEL_URL,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  ].filter(Boolean)) {
+    configuredOrigins.add(`https://${host}`);
+  }
+
   app.disable('x-powered-by');
+  if (process.env.VERCEL === '1') app.set('trust proxy', 1);
   app.use(express.json({ limit: '256kb' }));
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     const origin = req.get('origin');
-    if (origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    if (
+      origin &&
+      !localOrigin.test(origin) &&
+      !configuredOrigins.has(origin.replace(/\/$/, ''))
+    ) {
       return res.status(403).json({ error: 'Origem não permitida.' });
     }
     next();
@@ -27,7 +50,27 @@ export function createApp(db, { allowTestIdentity = false, mailer } = {}) {
 
   const publicContext = { db, service, text, fail, publicUser };
   registerPublicAuthRoutes(app, publicContext);
-  app.use('/api', sessionMiddleware(service, allowTestIdentity));
+
+  app.all('/api/internal/cron/escalate', async (req, res) => {
+    const expected = process.env.CRON_SECRET;
+    const authorization = req.get('authorization');
+    if (!expected || authorization !== `Bearer ${expected}`) {
+      return res.status(401).json({ error: 'Cron não autorizado.' });
+    }
+    try {
+      const result = service.escalate();
+      await mailer?.();
+      return res.json(result);
+    } catch (error) {
+      console.error('Falha no cron de escalonamento:', error);
+      return res.status(500).json({ error: 'Não foi possível processar os prazos.' });
+    }
+  });
+
+  app.use(
+    '/api',
+    sessionMiddleware(service, allowTestIdentity, allowStatelessSession),
+  );
 
   const requireRole = (req, roles) => {
     if (!roles.includes(req.actor.role)) fail('Seu perfil não pode executar esta ação.', 403);
